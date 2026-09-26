@@ -1,19 +1,127 @@
-// Lab 03 — replace each it.todo with a real test. See labs/03-test-doubles/README.md
+import { verifyPassword } from '../../src/auth/passwords';
+import { TokenService } from '../../src/auth/tokenService';
+import { ConflictError, UnauthorizedError, ValidationError } from '../../src/errors';
+import { DistrictRepository } from '../../src/repositories/districtRepository';
+import { AccountService, Registration } from '../../src/services/accountService';
+import { InMemoryUserRepository } from '../support/inMemoryRepositories';
+
+// DUMMY: register() never touches tokens; it fails loudly if that ever changes.
+const dummyTokens: TokenService = {
+  issue: () => {
+    throw new Error('dummy TokenService should not be used');
+  },
+  verify: () => {
+    throw new Error('dummy TokenService should not be used');
+  },
+};
+
+// STUB: feeds the indirect input "does this district exist?"
+function stubDistricts(existing: boolean): DistrictRepository {
+  return {
+    findAll: jest.fn(),
+    findById: jest.fn().mockResolvedValue(existing ? { id: 'CM-1', province: 'เชียงใหม่', number: 1 } : null),
+  };
+}
+
+const registration: Registration = {
+  nationalId: '1509900000017',
+  password: 'voter1234',
+  firstName: ' สมชาย ',
+  lastName: 'ใจดี',
+  address: '239 ถ.ห้วยแก้ว',
+  districtId: 'CM-1',
+};
+
 describe('AccountService', () => {
   describe('register', () => {
-    it.todo('registers a voter in an existing district (stub DistrictRepository, dummy TokenService)');
-    it.todo('rejects an unknown district');
-    it.todo('stores a hash, never the plain-text password (spy on UserRepository.create)');
-    it.todo('rejects a national id that is already registered (fake UserRepository)');
-    it.todo('does not save anything when the national id is invalid (mock: create not called)');
+    it('registers a voter in an existing district', async () => {
+      const accounts = new AccountService(new InMemoryUserRepository(), stubDistricts(true), dummyTokens);
+
+      const user = await accounts.register(registration);
+
+      expect(user).toMatchObject({ nationalId: '1509900000017', role: 'VOTER', districtId: 'CM-1' });
+    });
+
+    it('rejects an unknown district', async () => {
+      const accounts = new AccountService(new InMemoryUserRepository(), stubDistricts(false), dummyTokens);
+
+      const result = accounts.register(registration);
+
+      await expect(result).rejects.toThrow(new ValidationError('unknown district'));
+    });
+
+    it('stores a hash, never the plain-text password, and trims names', async () => {
+      const users = new InMemoryUserRepository();
+      const create = jest.spyOn(users, 'create'); // SPY: records the indirect output
+      const accounts = new AccountService(users, stubDistricts(true), dummyTokens);
+
+      await accounts.register(registration);
+
+      const saved = create.mock.calls[0][0];
+      expect(saved.passwordHash).not.toContain('voter1234');
+      expect(verifyPassword('voter1234', saved.passwordHash)).toBe(true);
+      expect(saved.firstName).toBe('สมชาย');
+    });
+
+    it('rejects a national id that is already registered', async () => {
+      const users = new InMemoryUserRepository(); // FAKE: remembers the first registration
+      const accounts = new AccountService(users, stubDistricts(true), dummyTokens);
+      await accounts.register(registration);
+
+      const second = accounts.register({ ...registration, firstName: 'คนอื่น' });
+
+      await expect(second).rejects.toThrow(ConflictError);
+    });
+
+    it('does not save anything when the national id is invalid', async () => {
+      const users = new InMemoryUserRepository();
+      const create = jest.spyOn(users, 'create');
+      const accounts = new AccountService(users, stubDistricts(true), dummyTokens);
+
+      await expect(accounts.register({ ...registration, nationalId: '1509900000018' })).rejects.toThrow(
+        ValidationError,
+      );
+
+      expect(create).not.toHaveBeenCalled();
+    });
   });
 
   describe('login', () => {
-    it.todo('issues a token for the user (mock TokenService.issue called with the principal)');
-    it.todo('rejects a wrong password without issuing a token');
+    async function accountsWithRegisteredVoter(tokens: TokenService) {
+      const users = new InMemoryUserRepository();
+      const accounts = new AccountService(users, stubDistricts(true), tokens);
+      const voter = await accounts.register(registration);
+      return { accounts, voter };
+    }
+
+    it('issues a token for the user', async () => {
+      // MOCK: we set an expectation on how issue() must be called
+      const tokens = { issue: jest.fn().mockReturnValue('token-123'), verify: jest.fn() };
+      const { accounts, voter } = await accountsWithRegisteredVoter(tokens);
+
+      const token = await accounts.login('1509900000017', 'voter1234');
+
+      expect(token).toBe('token-123');
+      expect(tokens.issue).toHaveBeenCalledWith({ userId: voter.id, role: 'VOTER', districtId: 'CM-1' });
+    });
+
+    it('rejects a wrong password without issuing a token', async () => {
+      const tokens = { issue: jest.fn(), verify: jest.fn() };
+      const { accounts } = await accountsWithRegisteredVoter(tokens);
+
+      await expect(accounts.login('1509900000017', 'wrong-password')).rejects.toThrow(UnauthorizedError);
+
+      expect(tokens.issue).not.toHaveBeenCalled();
+    });
   });
 
   describe('changeRole', () => {
-    it.todo('refuses to make anyone an ADMIN');
+    it('refuses to make anyone an ADMIN', async () => {
+      const accounts = new AccountService(new InMemoryUserRepository(), stubDistricts(true), dummyTokens);
+
+      const result = accounts.changeRole(1, 'ADMIN');
+
+      await expect(result).rejects.toThrow(ValidationError);
+    });
   });
 });
