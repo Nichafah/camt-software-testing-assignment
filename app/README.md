@@ -28,7 +28,9 @@ Express + TypeScript + Postgres, schema versioned with Liquibase.
 
 ## Database versioning (Liquibase)
 
-- Changelogs: `db/changelog/changes/NNN-*.sql` (Liquibase *formatted SQL*), included in order by `db.changelog-master.yaml`.
+- Changelogs: `db/changelog/changes/NNN-*.sql` (Liquibase *formatted SQL*), included in the order listed in `db.changelog-master.yaml`.
+- Every new changelog file must be added to that list by hand — a file that is not listed never runs, and Liquibase reports no error.
+- The master changelog holds a `day1` tag after the schema and before the seed files: `update-to-tag --tag=day1` applies schema only.
 - Never edit a changeset that has already run anywhere — add a new file.
 - `context:dev` changesets are demo data for local development only; `context:e2e` changesets bootstrap the admin/commissioner accounts of the e2e environment. Integration tests run with `--contexts=test`, so they see neither.
 - Liquibase runs from our own image (`db/Dockerfile`, changelog baked in), so the same command works on laptops and on every CI.
@@ -39,6 +41,14 @@ Handy commands (run against the test DB by default):
 docker compose run --rm --build liquibase status
 docker compose run --rm liquibase rollback-count --count=1
 docker compose run --rm liquibase history
+```
+
+```bash
+# apply จนถึงหมุด day1 แล้วหยุด
+docker compose run --rm liquibase update-to-tag --tag=day1
+
+# ย้อนทุกอย่างที่ apply หลังหมุด day1
+docker compose run --rm liquibase rollback --tag=day1
 ```
 
 ## Architecture
