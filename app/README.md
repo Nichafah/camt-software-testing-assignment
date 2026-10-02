@@ -17,6 +17,7 @@ Express + TypeScript + Postgres, schema versioned with Liquibase.
 | `npm run db:up:e2e` / `db:migrate:e2e` | Fresh e2e Postgres (port 5434, recreated every run) + migrations with bootstrap accounts |
 | `npm run test:e2e` | Fresh db-e2e + Liquibase + app container, then Playwright API tests |
 | `npm run typecheck` | `tsc --noEmit` over src, tests and e2e |
+| `npm run db:down` | Stop and remove every container of the stack, all profiles included (`app`, `db-e2e` are in profile `e2e`); the dev DB volume is kept |
 
 ## Test boundaries in this repo
 
