@@ -47,7 +47,8 @@ docker compose run --rm liquibase history
 # apply จนถึงหมุด day1 แล้วหยุด
 docker compose run --rm liquibase update-to-tag --tag=day1
 
-# ย้อนทุกอย่างที่ apply หลังหมุด day1
+# ย้อนกลับไปที่ Day 1 schema: ย้อนทุก changeset หลังหมุด และย้อนตัวหมุด tag-day1 ด้วย
+# (จะ rollback ไปที่ day1 อีกครั้ง ต้อง update-to-tag --tag=day1 ให้หมุดกลับมาก่อน)
 docker compose run --rm liquibase rollback --tag=day1
 ```
 
