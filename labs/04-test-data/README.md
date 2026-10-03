@@ -348,6 +348,25 @@ Isolation:
   npx jest --selectProjects integration --runInBand --randomize
   ```
 
+**ทำไม integration ต้อง `--runInBand`?**
+
+`--runInBand` (หรือ `-i`) = รัน test ทีละไฟล์ใน process เดียว — ปกติ Jest จะแตก worker หลายตัว (ประมาณตามจำนวน CPU) แล้วรันหลายไฟล์**พร้อมกัน**
+
+ทุกไฟล์ integration ใช้ **database เดียวกัน** (`db-test`) และทุก test เริ่มด้วย `truncateAll(pool)` → ถ้ารันพร้อมกันจะลบข้อมูลของกันและกัน:
+
+```
+worker 1: elections.test.ts              worker 2: register.test.ts
+  truncateAll()
+  insert commissioner
+                                            truncateAll()   ← ลบข้อมูลของ worker 1
+  POST /parties → 401 / 404 ✗
+```
+
+ผลคือ test แดง ๆ เขียว ๆ ตามจังหวะเวลา (_flaky_) ทั้งที่ code ไม่ได้ผิด — รันทีละไฟล์ทำให้แต่ละ test เห็นเฉพาะข้อมูลที่ตัวเอง insert
+
+- unit test **ไม่ต้อง** `--runInBand` (`npm run test:unit`) — ไม่มี state ร่วมกัน จึงรันขนานได้และเร็วกว่า
+- ราคาที่ต้องจ่าย: ยิ่งไฟล์เยอะยิ่งช้า → ถ้าอยากรันขนาน ต้องให้แต่ละ worker มี database/schema ของตัวเอง (เช่นตั้งชื่อตาม `JEST_WORKER_ID`) หรือใช้ Testcontainers (ดู branch `demo/testcontainers`)
+
 ## คุยกัน: Shared Fixture (anti-pattern ที่เจอบ่อยมาก)
 
 ถ้าใช้ `900-dev-seed.sql` เป็นข้อมูลสำหรับทุก test:
