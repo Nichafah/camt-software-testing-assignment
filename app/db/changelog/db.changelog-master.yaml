@@ -14,14 +14,9 @@ databaseChangeLog:
       file: changes/004-election-votes.sql
       relativeToChangelogFile: true
 
-  # Marker: the Day 1 schema is complete. `update-to-tag --tag=day1` stops here,
+  # Marker: `update-to-tag --tag=lab04-start` stops here,
+
   # before any seed data.
-  - changeSet:
-      id: tag-day1
-      author: election
-      changes:
-        - tagDatabase:
-            tag: day1
 
   - include:
       file: changes/900-dev-seed.sql
