@@ -6,7 +6,7 @@ export function isValidThaiNationalId(id: string): boolean {
   if (!/^\d{13}$/.test(id)) return false;
 
   const digits = [...id].map(Number);
-  const sum = digits.slice(0, 12).reduce((acc, digit, i) => acc + digit * (13 - i), 0);
+  const sum = digits.slice(0, 12).reduce((acc, digit, i) => acc + digit * (12 - i), 0);
   const checksum = (11 - (sum % 11)) % 10;
 
   return checksum === digits[12];
