@@ -4,19 +4,19 @@ Boundary: **U** = Unit · **I** = Integration · **C** = Component · **K** = Co
 
 | # | Test case | Boundary | เหตุผล |
 |---|---|---|---|
-| 1 | เลขบัตรประชาชนที่ checksum ผิด ถูกปฏิเสธตอนลงทะเบียน | | |
-| 2 | ลงทะเบียนด้วยเขตเลือกตั้งที่ไม่มีในระบบ ได้ 400 | | |
-| 3 | `PgUserRepository.findByNationalId` คืน user ที่ map column → field ถูกต้อง | | |
-| 4 | ผู้มีสิทธิเลือกตั้ง (VOTER) เรียก `POST /parties` แล้วได้ 403 | | |
-| 5 | ผู้ใช้ลงทะเบียน → login → ลงคะแนน → เปลี่ยนคะแนน → กกต. ปิดหีบ → ผลแสดงคะแนนถูกต้อง | | |
-| 6 | รหัสผ่านถูกเก็บแบบ hash ไม่ใช่ plain text | | |
-| 7 | หมายเลขผู้สมัครในเขตเดียวกันห้ามซ้ำ | | |
-| 8 | Liquibase changelog ทั้งหมด apply บน database เปล่าได้สำเร็จ | | |
-| 9 | ก่อนปิดหีบ `GET /districts/:id/results` ไม่แสดงคะแนน | | |
-| 10 | Frontend คาดว่า results API มี field `closed` และ `candidates[].votes` | | |
-| 11 | JWT ที่หมดอายุแล้ว ใช้ยืนยันตัวตนไม่ได้ | | |
-| 12 | admin เปลี่ยน role ผู้ใช้เป็น กกต. แล้วผู้ใช้นั้นสร้างพรรคได้ | | |
-| 13 | ระบบรับการลงคะแนนพร้อมกัน 1,000 ครั้งในนาทีแรกหลังเปิดหีบได้ | | |
-| 14 | ผู้มีสิทธิเห็นเฉพาะผู้สมัครในเขตของตัวเอง | | |
-| 15 | หน้ารายละเอียดพรรคแสดงผลสวยงามบนมือถือ | | |
-| 16 | หลังปิดหีบแล้ว ผู้มีสิทธิเปลี่ยนคะแนนไม่ได้ | | |
+| 1 | เลขบัตรประชาชนที่ checksum ผิด ถูกปฏิเสธตอนลงทะเบียน | U | `isValidThaiNationalId` เป็นการคำนวณล้วน ไม่ต้องใช้ DB หรือ HTTP จึงเร็วและชี้จุดพังได้แม่นที่สุด (lab 00 จับบั๊กได้ที่ระดับนี้ทันที) ระดับสูงกว่าไม่จำเป็น ถ้ามี component test สมัครผ่าน HTTP อยู่แล้ว 1 ข้อ |
+| 2 | ลงทะเบียนด้วยเขตเลือกตั้งที่ไม่มีในระบบ ได้ 400 | U | `AccountService.register` รับ `DistrictRepository` ผ่าน constructor และโยน `ValidationError('unknown district')` จึงใช้ stub คืน null ทดสอบกฎได้โดยไม่ต้องมี DB ส่วน error handler ใน `app.ts` แปลง `ValidationError` เป็น 400 ต้องมี component test อย่างน้อย 1 ข้อยืนยัน mapping นี้ แต่ไม่ต้องทำซ้ำทุกกฎ |
+| 3 | `PgUserRepository.findByNationalId` คืน user ที่ map column → field ถูกต้อง | I | เป็น gateway ที่คุยกับ DB การ map column ผิดเกิดได้เฉพาะตอนชน Postgres จริง ใช้ stub แทนไม่ได้ผล |
+| 4 | ผู้มีสิทธิเลือกตั้ง (VOTER) เรียก `POST /parties` แล้วได้ 403 | C | ความเสี่ยงอยู่ที่การเดินสาย `authenticate` + `requireRole('COMMISSIONER')` เข้ากับ route และการแปลง `ForbiddenError` เป็น 403 ใน error handler ทดสอบผ่าน `createApp` ด้วย token stub และ repository แบบ fake ได้ ไม่ต้องใช้ Postgres (ตัว `requireRole` เองทดสอบเป็น U ได้อีกข้อ) |
+| 5 | ผู้ใช้ลงทะเบียน → login → ลงคะแนน → เปลี่ยนคะแนน → กกต. ปิดหีบ → ผลแสดงคะแนนถูกต้อง | E | เป็น user journey ข้ามหลาย endpoint และหลายบทบาท ต้องรันทั้งระบบเหมือน production ควรมีน้อยข้อเพราะช้าและเปราะ (หมายเหตุ: ฟีเจอร์ปิดหีบยังไม่มีในระบบอ้างอิง) |
+| 6 | รหัสผ่านถูกเก็บแบบ hash ไม่ใช่ plain text | U | `hashPassword` ใน `auth/passwords.ts` เป็นฟังก์ชันล้วน (scrypt + salt) ตรวจได้ว่าผลลัพธ์ไม่เท่ารหัสผ่านดิบและ `verifyPassword` ยืนยันกลับได้ โดยไม่ต้องใช้ DB |
+| 7 | หมายเลขผู้สมัครในเขตเดียวกันห้ามซ้ำ | I | ตัวป้องกันคือ `UNIQUE (district_id, number)` ในตาราง candidates (`003-parties-candidates.sql`) ซึ่งกันได้แม้คำขอซ้อนกัน unit กับ stub ตรวจได้แค่ว่าโค้ดเรียกเช็ก ไม่ใช่ตัว constraint จึงต้องชน Postgres จริง |
+| 8 | Liquibase changelog ทั้งหมด apply บน database เปล่าได้สำเร็จ | I | ทดสอบ migration กับ DB จริงตรงๆ ซึ่งคือสิ่งที่ `db:migrate:test` ทำอยู่ ไม่มีทางทดสอบได้ถ้าไม่มี DB |
+| 9 | ก่อนปิดหีบ `GET /districts/:id/results` ไม่แสดงคะแนน | C | route ใน `electionRoutes.ts` สร้าง response เองจาก `districts` และ `candidates` ที่ inject ได้ จึงใช้ in-memory fake ผ่าน `createApp` ได้โดยไม่ต้องมี DB ตอนนี้ `closed` ถูก hardcode เป็น false และ response ไม่มีฟิลด์คะแนน |
+| 10 | Frontend คาดว่า results API มี field `closed` และ `candidates[].votes` | K | เป็นข้อตกลงรูปร่างข้อมูลระหว่าง consumer (frontend) กับ provider (API) ให้ consumer กำหนดสัญญา แล้ว provider ตรวจว่าตรง |
+| 11 | JWT ที่หมดอายุแล้ว ใช้ยืนยันตัวตนไม่ได้ | U | `JwtTokenService` ไม่ต้องใช้ DB หรือ HTTP สร้าง service ที่ `expiresInSeconds` ติดลบหรือใช้ fake timers แล้ว `verify` ต้องคืน `null` โดยไม่ต้องรอเวลาจริง |
+| 12 | admin เปลี่ยน role ผู้ใช้เป็น กกต. แล้วผู้ใช้นั้นสร้างพรรคได้ | C | ต้องเรียก `PATCH /admin/users/:id/role` (ADMIN) แล้ว login ใหม่ เพราะ role อยู่ใน token แล้วจึง `POST /parties` ผ่าน HTTP ทำด้วย `createApp` กับ fake `UserRepository` ได้ ส่วนการยืนยันว่า `updateRole` บันทึกลง DB จริงเป็นหน้าที่ของ integration test ของ repository (ข้อ 3) |
+| 13 | ระบบรับการลงคะแนนพร้อมกัน 1,000 ครั้งในนาทีแรกหลังเปิดหีบได้ | X | เป็น performance/load test ไม่ใช่ functional test ควรใช้เครื่องมือเฉพาะ เช่น k6 หรือ JMeter รันบนสภาพแวดล้อมคล้าย production และกำหนดเกณฑ์วัด (response time, error rate) |
+| 14 | ผู้มีสิทธิเห็นเฉพาะผู้สมัครในเขตของตัวเอง | C | `GET /me/candidates` อยู่ใน `voteRoutes.ts` ซึ่งใช้ `pool` และ SQL กรองเขตโดยตรง override repository ไม่ได้ จึงต้องทดสอบผ่าน HTTP กับ Postgres จริง |
+| 15 | หน้ารายละเอียดพรรคแสดงผลสวยงามบนมือถือ | X | "สวยงาม" ไม่มี assert ที่ชัดเจน ควรให้คนดูบนอุปกรณ์จริงหรือ responsive mode ของ browser (อาจเสริม visual regression ได้ แต่ยังต้องมีคนตัดสิน) |
+| 16 | หลังปิดหีบแล้ว ผู้มีสิทธิเปลี่ยนคะแนนไม่ได้ | C | `voteRoutes.ts` ผูก `jwt` และ `pool.query` ไว้ใน route handler ไม่มี seam จึงทดสอบเป็น unit ไม่ได้ ต้องยิงผ่าน HTTP กับ Postgres จริง (และตอนนี้ยังไม่มีฟีเจอร์ปิดหีบ) ถ้าแยกกฎไปไว้ใน service ที่ inject repository ได้ จะลงมาเป็น U |
