@@ -62,3 +62,16 @@ test ที่ดีแบ่งเป็น 3 ช่วงเรียงกั
 ไม่แตะ global ใดเลย แต่ละ test เป็นอิสระต่อกัน และค่า default `= process.env`
 ทำให้โค้ดจริงยังใช้งานได้เหมือนเดิม นี่คือ seam ตามที่ checklist ข้อ 10 พูดถึง
 
+ทดลองใส่บั๊ก return password; ใน hashPassword อีกรอบหลัง refactor (หลังเพิ่ม return password; ในฟังก์ชัน hashPassword พบว่า Test ที่ตรวจสอบการ hash รหัสผ่านล้มเหลว เนื่องจากผลลัพธ์เป็นรหัสผ่านต้นฉบับแทนค่า hash ทำให้ตรวจพบข้อผิดพลาดได้จาก Test ที่ระบุพฤติกรรมอย่างชัดเจน: **Experiment: Introduce a bug in `hashPassword`**
+
+* **Change:** Temporarily added `return password;` at the beginning of `hashPassword`.
+* **Command:** `npm run test:unit`
+* **Actual result:** 3 tests failed and 17 tests passed. One test suite failed and two test suites passed.
+* **Failed tests:**
+
+  1. `does not store the password in plain text` — received `"voter1234"` instead of a hashed value.
+  2. `produces a different hash each time for the same password (salt)` — the two returned values were identical.
+  3. `returns true for the correct password` — received `false` instead of `true`.
+* **Observation:** After refactoring the original smelly test into separate tests, each failure identifies a specific password-related behavior. The test names and assertion messages make the defects easier to locate.
+* **Recovery:** Restore the original `hashPassword` implementation and rerun the unit tests to verify that they pass.
+)
