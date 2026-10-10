@@ -15,6 +15,7 @@
     "db:migrate": "docker compose run --rm --build -e LIQUIBASE_COMMAND_URL=jdbc:postgresql://db:5432/election_dev -e LIQUIBASE_COMMAND_CONTEXTS=dev liquibase update",
     "db:up:test": "docker compose up -d --wait db-test",
     "db:migrate:test": "docker compose run --rm --build liquibase update",
+    "db:test-rollback": "npm run db:up:test && docker compose run --rm --build liquibase update-testing-rollback",
     "db:reset:test": "docker compose up -d --force-recreate --wait db-test",
     "test": "npm run test:unit && npm run test:integration",
     "test:unit": "jest --selectProjects unit",
