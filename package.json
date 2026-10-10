@@ -9,7 +9,9 @@
     "dev": "nodemon",
     "seed": "tsx prisma/seed.ts",
     "prisma:push": "npx prisma db push",
-    "prisma:generate": "npx prisma generate"
+    "prisma:generate": "npx prisma generate",
+    "test:unit": "node --test test/unit/*.test.cjs",
+    "test": "npm run test:unit"
   },
   "keywords": [],
   "author": "",
