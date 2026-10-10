@@ -22,8 +22,13 @@ jobs:
           cache-dependency-path: app/package-lock.json
       - run: npm ci
       - run: npm run typecheck
-      - run: npm run test:unit
-
+      - run: npm run test:coverage
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-coverage
+          path: app/coverage/
   integration:
     needs: unit
     runs-on: ubuntu-latest

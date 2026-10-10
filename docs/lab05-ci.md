@@ -55,3 +55,41 @@ Jenkins ใช้ Agent ที่สามารถถูกนำกลับ�
 การใช้ `post { always }` ทำให้ Cleanup ทำงานทั้งกรณี Pipeline สำเร็จและล้มเหลว
 
 ส่วน GitHub Actions ใช้ Runner แบบชั่วคราว และ GitLab CI ในโจทย์ใช้ Docker-in-Docker ที่แยกตาม Job จึงไม่จำเป็นต้องจัดการ Cleanup ของ Agent แบบเดียวกับ Jenkins
+
+## Part B: ผลที่เห็นใน GitHub Actions
+
+### 1. ผลการรัน CI ครั้งแรก (Green)
+
+ได้ Push โค้ดขึ้น GitHub Repository บน Branch `step/05-ci` ทำให้ GitHub Actions เริ่มทำงานโดยอัตโนมัติผ่านเหตุการณ์ `push`
+
+ผลการรัน Workflow `CI #18` มีสถานะ **Success** โดยใช้เวลารวม 2 นาที 5 วินาที
+
+| Job | ผลการทดสอบ | ระยะเวลา |
+|---|---|---|
+| Unit | Passed | 21 วินาที |
+| Integration | Passed | 49 วินาที |
+| E2E | Passed | 48 วินาที |
+
+**สรุป:** CI Pipeline ทำงานครบทั้ง 3 Jobs ตามลำดับ Unit → Integration → E2E และทุก Job ผ่านการทดสอบ แสดงว่าโค้ดในรอบนี้ผ่านการตรวจสอบตามเงื่อนไขที่ Pipeline กำหนด
+
+### 2. ผลการทดลอง CI ล้มเหลว (Red)
+
+รอทดลองทำให้ Unit Test ล้มเหลวและ Push ขึ้น GitHub เพื่อสังเกตว่า Integration และ E2E ถูกข้ามหรือไม่
+
+### 3. ผลการแก้ไขให้ CI กลับมาผ่าน (Green)
+
+รอแก้ไข Unit Test ให้ถูกต้องและ Push อีกครั้ง เพื่อยืนยันว่า Pipeline กลับมาทำงานสำเร็จทุก Job
+
+### 2. ผลการทดลอง CI ล้มเหลว (Red)
+
+ทดลองเพิ่ม Unit Test ที่ตั้งใจให้ล้มเหลวในไฟล์ `app/test/unit/passwords.test.ts` โดยกำหนด `expect(1 + 1).toBe(3)` ซึ่งผลลัพธ์จริงคือ 2
+
+หลังจาก Commit และ Push ไปยัง Branch `step/05-ci` พบว่า GitHub Actions Workflow `CI #19` มีสถานะ **Failure** โดยใช้เวลารวม 18 วินาที
+
+| Job | ผลการทดสอบ | ระยะเวลา |
+|---|---|---|
+| Unit | Failed | 15 วินาที |
+| Integration | Skipped | 0 วินาที |
+| E2E | Skipped | 0 วินาที |
+
+**สรุป:** เมื่อ Unit Test ไม่ผ่าน GitHub Actions จะข้าม Integration และ E2E โดยอัตโนมัติ เพราะกำหนด `needs: unit` และ `needs: integration` ทำให้ตรวจพบข้อผิดพลาดตั้งแต่ต้นและไม่เสียทรัพยากรในการทดสอบขั้นตอนถัดไป เป็นการทำงานตามหลักการ Fail Fast

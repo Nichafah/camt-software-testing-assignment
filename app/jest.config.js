@@ -10,6 +10,20 @@ const tsJest = {
 
 /** @type {import('jest').Config} */
 module.exports = {
+collectCoverageFrom: [
+  'src/domain/**/*.ts',
+  'src/services/**/*.ts',
+  '!src/**/*.d.ts',
+],
+coverageThreshold: {
+  global: {
+    statements: 80,
+    branches: 70,
+    functions: 80,
+    lines: 80,
+  },
+},
+
   projects: [
     {
       displayName: 'unit',
