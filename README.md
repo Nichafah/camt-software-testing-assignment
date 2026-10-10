@@ -1,3 +1,52 @@
+# Software Testing Assignment (15%) — Submission
+
+**ฉบับรวมสำหรับตรวจ: [testing-workshop](https://github.com/Nichafah/camt-software-testing-assignment/tree/testing-workshop)**.
+`main` เก็บ workshop reference และหน้านำทาง; โค้ดที่ส่งและ README ฉบับเต็มอยู่ branch ข้างต้น.
+
+## Setup และรัน unit tests
+
+ใช้ Node.js 24, npm และ Git. Unit tests ไม่ต้องใช้ Docker หรือ .env.
+
+```sh
+git clone --branch testing-workshop https://github.com/Nichafah/camt-software-testing-assignment.git
+cd camt-software-testing-assignment/app
+npm ci
+npm run typecheck
+npm run test:unit
+```
+
+คำสั่งจาก app/: `npm run test:coverage` ตรวจ unit + coverage gate;
+`npm run test:integration` เปิด DB test/migrate/รัน supertest;
+`npm run test:e2e` สร้าง DB E2E/app container แล้วรัน Playwright;
+`npm run test:all` รวม typecheck/unit/integration/E2E. สามคำสั่งหลังต้องเปิด Docker
+พร้อม Compose v2 และ ports 5433, 5434, 3000 ว่าง. รายละเอียดอยู่
+[README ฉบับส่ง](https://github.com/Nichafah/camt-software-testing-assignment/blob/testing-workshop/README.md).
+
+## หลักฐานและ testing theories
+
+- [Audit ทุก requirement พร้อม branch/commit/path/test name](https://github.com/Nichafah/camt-software-testing-assignment/blob/testing-workshop/docs/submission-audit.md)
+- [Unit test design และ six elements](https://github.com/Nichafah/camt-software-testing-assignment/blob/testing-workshop/docs/unit-test-design.md)
+- [Bonus: Backend original vs V&V](https://github.com/Nichafah/camt-software-testing-assignment/blob/testing-workshop/docs/backend-comparison.md)
+
+แยก unit ที่ไม่มี I/O จาก component ที่ใช้ PostgreSQL จริงและ E2E ผ่าน HTTP;
+ใช้ AAA/Given–When–Then เพื่อแยก setup/action/assertion. Happy path คู่กับ failure
+ช่วยจับข้อผิดพลาดทั้งการยอมรับและปฏิเสธ. Stub ควบคุม indirect input, spy บันทึก
+indirect output, mock ตรวจ interaction; fake เป็น repository ใน memory.
+Faker สร้างข้อมูลขณะรันพร้อม fixed seed; fresh fixture ป้องกัน test พึ่งลำดับ.
+Dependency injection สร้าง seam; characterization บันทึกพฤติกรรมเดิมก่อน refactor;
+Sprout Method แยกกฎใหม่ให้ทดสอบโดยไม่มี DB; outside-in เริ่มจาก acceptance.
+CI ใช้ fail fast และ coverage gate; coverage ไม่ใช่หลักฐานว่าปราศจาก bug.
+
+Workshop branches: step/00-setup, step/01-boundaries, step/02-aaa-unit,
+step/03-test-doubles, step/04-test-data, step/05-ci, step/06-outside-in,
+step/07-legacy และ testing-workshop (Lab 08).
+Bonus branches: backend/original และ backend/vv; ใช้คนละ codebase กับ workshop.
+ตัวเลขผลล่าสุดและข้อจำกัดเรื่องประวัติ commits/การเข้าถึง CAMTPL ดู audit report.
+
+เอกสารของผู้สอนเดิมเก็บต่อด้านล่างเพื่อระบุที่มาของ workshop scaffold.
+
+---
+
 # Software Testing in Real Industry
 
 **Hands-on automated testing workshop & readiness checklist**
