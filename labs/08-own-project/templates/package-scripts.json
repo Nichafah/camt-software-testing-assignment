@@ -1,0 +1,9 @@
+{
+  "scripts": {
+    "db:up:test": "docker compose -f docker-compose.test.yml up -d --wait db-test",
+    "db:migrate:test": "docker compose -f docker-compose.test.yml run --rm --build liquibase update",
+    "test": "npm run test:unit && npm run test:integration",
+    "test:unit": "jest --selectProjects unit",
+    "test:integration": "npm run db:up:test && npm run db:migrate:test && jest --selectProjects integration --runInBand"
+  }
+}

@@ -27,4 +27,17 @@ describe('isValidThaiNationalId', () => {
   ])('rejects a malformed id (%s)', (_case, id) => {
     expect(isValidThaiNationalId(id)).toBe(false);
   });
+  // Lab 08 / Lab 01 case 1: only the known checksum digit 7 is accepted.
+  it.each(['0', '1', '2', '3', '4', '5', '6', '8', '9'])(
+    'rejects checksum digit %s for the independently known valid prefix',
+    (digit) => {
+      // Arrange: this fixed prefix has checksum 7; no production algorithm in the oracle.
+      const id = `150990000001${digit}`;
+      // Act
+      const valid = isValidThaiNationalId(id);
+      // Assert
+      expect(valid).toBe(false);
+    },
+  );
+
 });

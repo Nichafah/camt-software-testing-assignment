@@ -1,0 +1,32 @@
+# Test infrastructure only — keep your existing docker-compose.yml as it is.
+#   docker compose -f docker-compose.test.yml up -d --wait db-test
+#   docker compose -f docker-compose.test.yml run --rm --build liquibase update
+name: myproject-test
+
+services:
+  db-test:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: app_test
+    ports:
+      - "5433:5432"          # not 5432 — leave that one for your dev database
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d app_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  liquibase:
+    build: ./db
+    profiles: ["tools"]
+    environment:
+      LIQUIBASE_COMMAND_URL: jdbc:postgresql://db-test:5432/app_test
+      LIQUIBASE_COMMAND_USERNAME: app
+      LIQUIBASE_COMMAND_PASSWORD: app
+      LIQUIBASE_COMMAND_CHANGELOG_FILE: db.changelog-master.yaml
+      LIQUIBASE_COMMAND_CONTEXTS: test
+      LIQUIBASE_SHOW_BANNER: "false"
