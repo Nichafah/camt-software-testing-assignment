@@ -37,7 +37,7 @@ before candidate lookup after closure. All rejected requests must perform zero w
 Original service with characterization harness: 7/7 passed before refactoring.
 Injected voting unit: 7/7 passed after refactoring.
 Targeted strict TypeScript check of src/services/castVote.ts passed using the workshop's
-installed compiler (tsc --noEmit --strict --skipLibCheck --target es2020 --module commonjs).
+installed compiler (tsc --ignoreConfig --noEmit --strict --skipLibCheck --target es2020 --module commonjs).
 A full original Backend production build, Prisma integration, HTTP tests, S3/Supabase,
 and concurrent close/vote behavior have not been verified by these unit tests.
 
