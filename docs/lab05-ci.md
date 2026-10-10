@@ -1,0 +1,57 @@
+# Lab 05 — Continuous Integration
+
+## Part A: อ่าน Pipeline
+
+### 1. ลำดับ Stage และเหตุผลที่ Unit มาก่อน E2E
+
+GitHub Actions CI Pipeline มีลำดับการทำงาน 3 Jobs ได้แก่
+
+1. **Unit:** ติดตั้ง Dependencies ตรวจสอบ TypeScript ด้วย `typecheck` และรัน Unit Tests
+2. **Integration:** ทำงานหลัง Unit ผ่าน โดยเริ่มฐานข้อมูลทดสอบ รัน Liquibase และ Integration Tests
+3. **E2E:** ทำงานหลัง Integration ผ่าน โดยเตรียมฐานข้อมูลและ Application Container ก่อนรัน Playwright Tests
+
+ในไฟล์ `.github/workflows/ci.yml` มีการกำหนด `needs: unit` และ `needs: integration` เพื่อควบคุมลำดับการทำงาน
+
+เหตุผลที่ Unit Test มาก่อน E2E Test คือหลักการ **Fail Fast** เนื่องจาก Unit Test ทำงานรวดเร็วและใช้ทรัพยากรน้อยกว่า หาก Unit Test ไม่ผ่าน Pipeline จะไม่เข้าสู่ Integration และ E2E ซึ่งใช้เวลาและทรัพยากรมากกว่า ช่วยลดเวลาและค่าใช้จ่ายในการทดสอบ
+
+### 2. Liquibase ถูกรันตรงไหน และฐานข้อมูลใน CI มาจากไหนและถูกลบเมื่อไหร่
+
+Liquibase ถูกรันในขั้นตอน Integration Test และ E2E Test ผ่าน npm scripts ที่กำหนดใน `app/package.json`
+
+**Integration Test**
+
+- `db:up:test` เริ่ม PostgreSQL Service ชื่อ `db-test` ผ่าน Docker Compose
+- `db:migrate:test` รัน Liquibase เพื่อเตรียมโครงสร้างฐานข้อมูล
+- `test:integration` เรียกใช้ขั้นตอนดังกล่าว ก่อนรัน Jest Integration Tests
+
+**E2E Test**
+
+- `db:up:e2e` เริ่ม PostgreSQL Service ชื่อ `db-e2e`
+- `db:migrate:e2e` รัน Liquibase สำหรับฐานข้อมูล E2E
+- `test:e2e` เริ่มฐานข้อมูล ทำ Migration เริ่ม Application Container และรัน Playwright Tests
+
+ฐานข้อมูลทั้งสองชุดสร้างผ่าน Docker Compose เพื่อใช้สำหรับการทดสอบโดยเฉพาะ และแยกจากฐานข้อมูล Production
+
+**การลบฐานข้อมูลหลังการทดสอบ**
+
+- **GitHub Actions:** แต่ละ Job ทำงานบน Runner ที่แยกจากกัน เมื่อ Job สิ้นสุด Runner และทรัพยากร Docker ภายในจะถูกยกเลิก
+- **GitLab CI:** ใช้ Docker-in-Docker สำหรับ Jobs ที่ต้องใช้ฐานข้อมูล โดยการทำความสะอาดสภาพแวดล้อมขึ้นอยู่กับการจัดการ Job และ Runner
+- **Jenkins:** ใช้คำสั่ง `docker compose --profile e2e --profile tools down -v --remove-orphans` ใน `post { always }` เพื่อทำความสะอาด Containers และ Volumes หลังจบ Pipeline
+
+### 3. ทำไม GitLab ใช้ Host `docker` ไม่ใช่ `localhost`
+
+GitLab CI ใช้ Docker-in-Docker (DinD) โดยกำหนด Service Alias เป็น `docker` และเชื่อมต่อ Docker Daemon ผ่าน `tcp://docker:2375`
+
+ดังนั้น PostgreSQL ที่สร้างผ่าน Docker Compose จะเข้าถึงผ่าน Host `docker` และ Port `5433` ตามค่า `DATABASE_URL` ไม่ใช่ `localhost` ของ Job Container
+
+เนื่องจาก `localhost` หมายถึง Container ที่กำลังรัน CI Job อยู่ ไม่ใช่ Docker Service ที่ให้บริการฐานข้อมูล
+
+### 4. ทำไม Jenkins ต้องใช้ `docker compose down -v` ใน `post { always }`
+
+Jenkins ใช้ Agent ที่สามารถถูกนำกลับมาใช้ในการ Build ครั้งถัดไป จึงต้องทำความสะอาด Containers, Networks และ Volumes หลังการทดสอบ
+
+คำสั่ง `docker compose --profile e2e --profile tools down -v --remove-orphans` ช่วยลบทรัพยากรที่เกี่ยวข้องกับ Docker Compose และป้องกันข้อมูลทดสอบตกค้างหรือ Port ชนกันระหว่าง Build
+
+การใช้ `post { always }` ทำให้ Cleanup ทำงานทั้งกรณี Pipeline สำเร็จและล้มเหลว
+
+ส่วน GitHub Actions ใช้ Runner แบบชั่วคราว และ GitLab CI ในโจทย์ใช้ Docker-in-Docker ที่แยกตาม Job จึงไม่จำเป็นต้องจัดการ Cleanup ของ Agent แบบเดียวกับ Jenkins
