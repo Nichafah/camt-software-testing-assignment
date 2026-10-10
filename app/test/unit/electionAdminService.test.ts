@@ -14,8 +14,8 @@ describe('ElectionAdminService.addCandidate', () => {
   beforeEach(async () => {
     const parties = new InMemoryPartyRepository();
     const districts = new InMemoryDistrictRepository([
-      { id: 'CM-1', province: 'เชียงใหม่', number: 1 },
-      { id: 'CM-2', province: 'เชียงใหม่', number: 2 },
+ { id: 'CM-1', province: 'เชียงใหม่', number: 1, closedAt: null },
+ { id: 'CM-2', province: 'เชียงใหม่', number: 2, closedAt: null },
     ]);
     admin = new ElectionAdminService(parties, new InMemoryCandidateRepository(parties), districts);
     doiSuthep = (await admin.createParty({ name: 'พรรคดอยสุเทพ', policy: 'รถแดงไฟฟ้า' })).id;

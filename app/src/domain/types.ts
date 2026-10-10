@@ -15,6 +15,7 @@ export interface District {
   id: string;
   province: string;
   number: number;
+  closedAt: Date | null;
 }
 
 export interface Party {

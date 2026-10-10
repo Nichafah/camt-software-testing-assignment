@@ -14,6 +14,9 @@ databaseChangeLog:
       file: changes/004-election-votes.sql
       relativeToChangelogFile: true
   - include:
+      file: changes/005-district-poll-closing.sql
+      relativeToChangelogFile: true   
+  - include:
       file: changes/900-dev-seed.sql
       relativeToChangelogFile: true
   - include:

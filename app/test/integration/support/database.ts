@@ -10,5 +10,12 @@ export function createTestPool(): Pool {
  * Liquibase's own tables stay — they come from the migrations.
  */
 export async function truncateAll(pool: Pool): Promise<void> {
-  await pool.query('TRUNCATE votes, candidates, parties, users, election RESTART IDENTITY CASCADE');
+  await pool.query(
+    'TRUNCATE votes, candidates, parties, users, election RESTART IDENTITY CASCADE'
+  );
+
+  // Reset poll status so every test starts with an open district.
+  await pool.query(
+    'UPDATE districts SET closed_at = NULL'
+  );
 }

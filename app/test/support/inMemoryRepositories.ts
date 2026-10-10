@@ -10,11 +10,28 @@ export class InMemoryDistrictRepository implements DistrictRepository {
   constructor(private readonly districts: District[] = []) {}
 
   async findAll(): Promise<District[]> {
-    return [...this.districts].sort((a, b) => a.province.localeCompare(b.province) || a.number - b.number);
+    return [...this.districts].sort(
+      (a, b) => a.province.localeCompare(b.province) || a.number - b.number,
+    );
   }
 
   async findById(id: string): Promise<District | null> {
     return this.districts.find((d) => d.id === id) ?? null;
+  }
+
+  async close(id: string, closedAt: Date): Promise<boolean> {
+    const district = this.districts.find((d) => d.id === id);
+
+    if (!district) {
+      return false;
+    }
+
+    if (district.closedAt !== null) {
+      return false;
+    }
+
+    district.closedAt = closedAt;
+    return true;
   }
 }
 

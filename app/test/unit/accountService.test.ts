@@ -20,6 +20,7 @@ function stubDistricts(existing: boolean): DistrictRepository {
   return {
     findAll: jest.fn(),
     findById: jest.fn().mockResolvedValue(existing ? { id: 'CM-1', province: 'เชียงใหม่', number: 1 } : null),
+    close: jest.fn(),
   };
 }
 

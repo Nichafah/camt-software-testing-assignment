@@ -6,18 +6,27 @@ import { CandidateRepository } from '../repositories/candidateRepository';
 import { DistrictRepository } from '../repositories/districtRepository';
 import { PartyRepository } from '../repositories/partyRepository';
 import { ElectionAdminService } from '../services/electionAdminService';
-
+import { PollService } from '../services/pollService';
 interface ElectionRouteDeps {
   admin: ElectionAdminService;
   districts: DistrictRepository;
   parties: PartyRepository;
   candidates: CandidateRepository;
   tokens: TokenService;
+  poll?: PollService;
 }
 
-export function electionRoutes({ admin, districts, parties, candidates, tokens }: ElectionRouteDeps): Router {
+export function electionRoutes({
+  admin,
+  districts,
+  parties,
+  candidates,
+  tokens,
+  poll,
+}: ElectionRouteDeps): Router {
   const router = Router();
   const commissionerOnly = [authenticate(tokens), requireRole('COMMISSIONER')];
+
 
   router.get('/districts', async (_req, res) => {
     res.json(await districts.findAll());
@@ -42,22 +51,26 @@ export function electionRoutes({ admin, districts, parties, candidates, tokens }
   });
 
   // Public results. Scores stay hidden: nobody can close a district's poll yet.
-  router.get('/districts/:id/results', async (req, res) => {
-    const district = await districts.findById(req.params.id as string);
-    if (!district) throw new NotFoundError('district not found');
+// Commissioner closes a district's poll.
+router.post('/districts/:id/close', ...commissionerOnly, async (req, res) => {
+  if (!poll) {
+    res.status(500).json({ error: 'poll service unavailable' });
+    return;
+  }
 
-    const list = await candidates.findByDistrict(district.id);
-    res.json({
-      district,
-      closed: false,
-      candidates: list.map((c) => ({
-        number: c.number,
-        firstName: c.firstName,
-        lastName: c.lastName,
-        partyName: c.partyName,
-      })),
-    });
-  });
+  const result = await poll.close(req.params.id as string);
+  res.status(200).json(result);
+});
 
-  return router;
+// Public results: hide votes before closing, show votes after closing.
+router.get('/districts/:id/results', async (req, res) => {
+  if (!poll) {
+    res.status(500).json({ error: 'poll service unavailable' });
+    return;
+  }
+
+  res.json(await poll.resultsFor(req.params.id as string));
+});
+
+return router;
 }
