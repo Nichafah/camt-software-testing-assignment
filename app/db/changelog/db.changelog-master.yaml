@@ -13,17 +13,12 @@ databaseChangeLog:
   - include:
       file: changes/004-election-votes.sql
       relativeToChangelogFile: true
-
-  # Marker: `update-to-tag --tag=lab04-start` stops here,
-
-  # before any seed data.
-
   - include:
       file: changes/900-dev-seed.sql
       relativeToChangelogFile: true
   - include:
-      file: changes/901-e2e-seed.sql
+      file: changes/902-seed-commissioners.sql
       relativeToChangelogFile: true
   - include:
-      file: changes/902-seed-commissioners.sql
+      file: changes/901-e2e-seed.sql
       relativeToChangelogFile: true
