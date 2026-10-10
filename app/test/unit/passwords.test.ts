@@ -34,3 +34,6 @@ describe('verifyPassword', () => {
     },
   );
 });
+it('lab05: intentionally failing test for CI demonstration', () => {
+  expect(1 + 1).toBe(3);
+});
