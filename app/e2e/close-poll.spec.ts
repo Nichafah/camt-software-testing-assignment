@@ -4,13 +4,21 @@ import { COMMISSIONER, ElectionApi } from './support/electionApi';
 test('commissioner closes the poll and publishes district results', async ({ request }) => {
   const api = new ElectionApi(request);
   const districtId = 'CM-3';
+  const runId = `${Date.now()}-${process.pid}`;
 
   // 1. กกต. เข้าสู่ระบบ
   const commissionerToken = await api.login(COMMISSIONER);
 
   // 2. สร้างพรรค 2 พรรค
-  const party1 = await api.createParty(commissionerToken, 'Lab06 Green Lanna');
-  const party2 = await api.createParty(commissionerToken, 'Lab06 Ping River');
+const party1 = await api.createParty(
+  commissionerToken,
+  `Lab06 Green Lanna ${runId}`,
+);
+
+const party2 = await api.createParty(
+  commissionerToken,
+  `Lab06 Ping River ${runId}`,
+);
 
   // 3. เพิ่มผู้สมัครหมายเลข 1 และ 2
   const candidate1 = await api.addCandidate(commissionerToken, districtId, party1.id, 1);
@@ -38,7 +46,7 @@ test('commissioner closes the poll and publishes district results', async ({ req
     expect(candidate).not.toHaveProperty('votes');
   }
 
-  // 7. กกต. ปิดหีบ (ตอนนี้ยังไม่มี API จึงต้องได้ 404)
+// 7. กกต. ปิดหีบ ต้องได้รับ HTTP 200
   const closed = await request.post(`/districts/${districtId}/close`, {
     headers: { Authorization: `Bearer ${commissionerToken}` },
   });
