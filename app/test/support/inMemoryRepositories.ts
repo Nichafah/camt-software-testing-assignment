@@ -1,51 +1,58 @@
-// FAKES: working implementations without I/O, for unit tests.
-// They must behave like the Pg versions (same ordering, same "not found" = null).
-import { Candidate, District, Party, Role, User } from '../../src/domain/types';
-import { CandidateRepository, NewCandidate } from '../../src/repositories/candidateRepository';
-import { DistrictRepository } from '../../src/repositories/districtRepository';
-import { NewParty, PartyRepository } from '../../src/repositories/partyRepository';
+
+import { Candidate, District, Party, User } from '../../src/domain/types';
 import { NewUser, UserRepository } from '../../src/repositories/userRepository';
+import { DistrictRepository } from '../../src/repositories/districtRepository';
+import { PartyRepository, NewParty } from '../../src/repositories/partyRepository';
+import { CandidateRepository, NewCandidate } from '../../src/repositories/candidateRepository';
+export class InMemoryUserRepository implements UserRepository {
+  private users: User[] = [];
+  private nextId = 1;
+
+  async findById(id: number): Promise<User | null> {
+    return this.users.find((user) => user.id === id) ?? null;
+  }
+
+  async findByNationalId(nationalId: string): Promise<User | null> {
+    return this.users.find((user) => user.nationalId === nationalId) ?? null;
+  }
+
+  async create(user: NewUser): Promise<User> {
+    const created: User = {
+      ...user,
+      id: this.nextId++,
+      role: 'VOTER',
+    };
+
+    this.users.push(created);
+    return created;
+  }
+
+  async updateRole(id: number, role: User['role']): Promise<User | null> {
+    const user = this.users.find((item) => item.id === id);
+
+    if (!user) return null;
+
+    user.role = role;
+    return { ...user };
+  }
+}
 
 export class InMemoryDistrictRepository implements DistrictRepository {
   constructor(private readonly districts: District[] = []) {}
 
   async findAll(): Promise<District[]> {
-    return [...this.districts].sort((a, b) => a.province.localeCompare(b.province) || a.number - b.number);
+    return [...this.districts].sort(
+      (a, b) => a.province.localeCompare(b.province) || a.number - b.number,
+    );
   }
 
   async findById(id: string): Promise<District | null> {
-    return this.districts.find((d) => d.id === id) ?? null;
-  }
-}
-
-export class InMemoryUserRepository implements UserRepository {
-  private readonly users: User[] = [];
-  private nextId = 1;
-
-  async findById(id: number): Promise<User | null> {
-    return this.users.find((u) => u.id === id) ?? null;
-  }
-
-  async findByNationalId(nationalId: string): Promise<User | null> {
-    return this.users.find((u) => u.nationalId === nationalId) ?? null;
-  }
-
-  async create(user: NewUser): Promise<User> {
-    const created: User = { ...user, id: this.nextId++, role: 'VOTER' };
-    this.users.push(created);
-    return created;
-  }
-
-  async updateRole(id: number, role: Role): Promise<User | null> {
-    const user = this.users.find((u) => u.id === id);
-    if (!user) return null;
-    user.role = role;
-    return user;
+    return this.districts.find((district) => district.id === id) ?? null;
   }
 }
 
 export class InMemoryPartyRepository implements PartyRepository {
-  private readonly parties: Party[] = [];
+  private parties: Party[] = [];
   private nextId = 1;
 
   async findAll(): Promise<Party[]> {
@@ -53,40 +60,58 @@ export class InMemoryPartyRepository implements PartyRepository {
   }
 
   async findById(id: number): Promise<Party | null> {
-    return this.parties.find((p) => p.id === id) ?? null;
+    return this.parties.find((party) => party.id === id) ?? null;
   }
 
   async findByName(name: string): Promise<Party | null> {
-    return this.parties.find((p) => p.name === name) ?? null;
+    return this.parties.find((party) => party.name === name) ?? null;
   }
 
   async create(party: NewParty): Promise<Party> {
-    const created = { ...party, id: this.nextId++ };
+    const created: Party = {
+      ...party,
+      id: this.nextId++,
+    };
+
     this.parties.push(created);
     return created;
   }
 }
 
 export class InMemoryCandidateRepository implements CandidateRepository {
-  private readonly candidates: Candidate[] = [];
+  private candidates: Candidate[] = [];
   private nextId = 1;
 
   constructor(private readonly parties: PartyRepository) {}
 
   async findByDistrict(districtId: string): Promise<Candidate[]> {
-    return this.candidates.filter((c) => c.districtId === districtId).sort((a, b) => a.number - b.number);
+    return this.candidates
+      .filter((candidate) => candidate.districtId === districtId)
+      .sort((a, b) => a.number - b.number);
   }
 
   async findByParty(partyId: number): Promise<Candidate[]> {
     return this.candidates
-      .filter((c) => c.partyId === partyId)
-      .sort((a, b) => a.districtId.localeCompare(b.districtId) || a.number - b.number);
+      .filter((candidate) => candidate.partyId === partyId)
+      .sort(
+        (a, b) =>
+          a.districtId.localeCompare(b.districtId) || a.number - b.number,
+      );
   }
 
   async create(candidate: NewCandidate): Promise<Candidate> {
     const party = await this.parties.findById(candidate.partyId);
-    if (!party) throw new Error(`fake: party ${candidate.partyId} does not exist (foreign key)`);
-    const created = { ...candidate, id: this.nextId++, partyName: party.name };
+
+    if (!party) {
+      throw new Error('party must exist before creating a candidate');
+    }
+
+    const created: Candidate = {
+      ...candidate,
+      id: this.nextId++,
+      partyName: party.name,
+    };
+
     this.candidates.push(created);
     return created;
   }
