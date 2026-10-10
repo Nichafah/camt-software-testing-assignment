@@ -1,10 +1,14 @@
 // src/services/vote.service.ts
+import { castVote, VoteDeps } from "./castVote";
 import * as voteRepo from "../repositories/vote.repository";
 import * as userRepo from "../repositories/user.repository";
 import * as candidateRepo from "../repositories/candidate.repository";
 import * as constituencyRepo from "../repositories/constituency.repository";
 
 export class VoteService {
+  constructor(private readonly voteDeps: VoteDeps = {
+    users: userRepo, candidates: candidateRepo, votes: voteRepo,
+  }) {}
   public getBallot = async (userId: number) => {
     const user = await userRepo.findById(userId);
 
@@ -46,53 +50,8 @@ export class VoteService {
     };
   };
 
-  public castVote = async (userId: number, candidateId: number) => {
-    const user = await userRepo.findById(userId);
-
-    if (!user) {
-      throw new Error(`ไม่พบผู้ใช้ ID: ${userId}`);
-    }
-
-    if (!user.constituencyId) {
-      throw new Error(`ผู้ใช้ยังไม่ได้ลงทะเบียนในเขตเลือกตั้ง`);
-    }
-
-    if (user.constituency.isClosed) {
-      throw new Error(
-        `การลงคะแนนในเขต ${user.constituency.province} เขตที่ ${user.constituency.districtNumber} ปิดแล้ว`,
-      );
-    }
-
-    const candidate = await candidateRepo.findById(candidateId);
-
-    if (!candidate) {
-      throw new Error(`ไม่พบผู้สมัคร ID: ${candidateId}`);
-    }
-
-    if (candidate.constituencyId !== user.constituencyId) {
-      throw new Error(`ผู้สมัครนี้ไม่ได้อยู่ในเขตเลือกตั้งของคุณ`);
-    }
-
-    const vote = await voteRepo.upsertVote(userId, candidateId);
-
-    return {
-      message: "ลงคะแนนสำเร็จ",
-      vote: {
-        id: vote.id,
-        timestamp: vote.timestamp,
-        candidate: {
-          id: vote.candidate.id,
-          candidateNumber: vote.candidate.candidateNumber,
-          firstName: vote.candidate.user.firstName,
-          lastName: vote.candidate.user.lastName,
-          party: {
-            id: vote.candidate.party.id,
-            name: vote.candidate.party.name,
-          },
-        },
-      },
-    };
-  };
+  public castVote = (userId: number, candidateId: number) =>
+    castVote(this.voteDeps, userId, candidateId);
 
 
   public getMyVote = async (userId: number) => {
