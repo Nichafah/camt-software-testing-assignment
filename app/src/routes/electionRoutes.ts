@@ -50,27 +50,27 @@ export function electionRoutes({
     res.status(201).json(await admin.addCandidate(req.params.id as string, req.body ?? {}));
   });
 
-  // Public results. Scores stay hidden: nobody can close a district's poll yet.
-// Commissioner closes a district's poll.
-router.post('/districts/:id/close', ...commissionerOnly, async (req, res) => {
-  if (!poll) {
-    res.status(500).json({ error: 'poll service unavailable' });
-    return;
-  }
 
-  const result = await poll.close(req.params.id as string);
-  res.status(200).json(result);
-});
+  // Commissioner closes a district's poll.
+  router.post('/districts/:id/close', ...commissionerOnly, async (req, res) => {
+    if (!poll) {
+      res.status(500).json({ error: 'poll service unavailable' });
+      return;
+    }
 
-// Public results: hide votes before closing, show votes after closing.
-router.get('/districts/:id/results', async (req, res) => {
-  if (!poll) {
-    res.status(500).json({ error: 'poll service unavailable' });
-    return;
-  }
+    const result = await poll.close(req.params.id as string);
+    res.status(200).json(result);
+  });
 
-  res.json(await poll.resultsFor(req.params.id as string));
-});
+  // Public results: hide votes before closing, show votes after closing.
+  router.get('/districts/:id/results', async (req, res) => {
+    if (!poll) {
+      res.status(500).json({ error: 'poll service unavailable' });
+      return;
+    }
 
-return router;
+    res.json(await poll.resultsFor(req.params.id as string));
+  });
+
+  return router;
 }
