@@ -1,3 +1,5 @@
+import { faker, fakerTH } from '@faker-js/faker';
+import { aValidNationalId } from '../support/nationalIds';
 import { verifyPassword } from '../../src/auth/passwords';
 import { TokenService } from '../../src/auth/tokenService';
 import { ConflictError, UnauthorizedError, ValidationError } from '../../src/errors';
@@ -41,6 +43,35 @@ describe('AccountService', () => {
       const user = await accounts.register(registration);
 
       expect(user).toMatchObject({ nationalId: '1509900000017', role: 'VOTER', districtId: 'CM-1' });
+    });
+
+    it('registers dynamically generated Faker voter data without exposing the password hash', async () => {
+      // Arrange: seedFaker.ts fixes the seed, but fields are generated at runtime.
+      const input: Registration = {
+        nationalId: aValidNationalId(),
+        password: faker.string.alphanumeric(12),
+        firstName: fakerTH.person.firstName(),
+        lastName: fakerTH.person.lastName(),
+        address: fakerTH.location.streetAddress(),
+        districtId: 'CM-1',
+      };
+      const users = new InMemoryUserRepository();
+      const accounts = new AccountService(users, stubDistricts(true), dummyTokens);
+
+      // Act
+      const voter = await accounts.register(input);
+
+      // Assert: generated fields survive registration and secrets remain private.
+      expect(voter).toEqual({
+        id: 1, nationalId: input.nationalId, firstName: input.firstName.trim(),
+        lastName: input.lastName.trim(), address: input.address.trim(),
+        districtId: 'CM-1', role: 'VOTER',
+      });
+      expect(voter).not.toHaveProperty('passwordHash');
+      const saved = await users.findById(voter.id);
+      expect(saved).not.toBeNull();
+      expect(verifyPassword(input.password, saved!.passwordHash)).toBe(true);
+      expect(verifyPassword(`${input.password}-wrong`, saved!.passwordHash)).toBe(false);
     });
 
     it('rejects an unknown district', async () => {
