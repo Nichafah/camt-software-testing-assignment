@@ -9,13 +9,14 @@ import { PartyRepository, PgPartyRepository } from './repositories/partyReposito
 import { PgUserRepository, UserRepository } from './repositories/userRepository';
 import { accountRoutes } from './routes/accountRoutes';
 import { electionRoutes } from './routes/electionRoutes';
-import voteRoutes from './routes/voteRoutes';
+import { voteRoutes } from './routes/voteRoutes';
 import { AccountService } from './services/accountService';
 import { ElectionAdminService } from './services/electionAdminService';
 import { PgVoteRepository, VoteRepository } from './repositories/voteRepository';
 import { PollService } from './services/pollService';
 
 export interface AppDeps {
+  pool: Pool;
   tokens: TokenService;
   clock: Clock;
   users: UserRepository;
@@ -28,6 +29,7 @@ export interface AppDeps {
 /** Real repositories on a real Pool — tests can override any of them. */
 export function pgDeps(pool: Pool, tokens: TokenService, overrides: Partial<AppDeps> = {}): AppDeps {
   return {
+    pool,
     tokens,
     clock: systemClock,
     users: new PgUserRepository(pool),
@@ -54,7 +56,7 @@ export function createApp(deps: AppDeps) {
   });
   app.use(accountRoutes(accounts, deps.tokens));
   app.use(electionRoutes({ admin, ...deps, poll }));
-  app.use(voteRoutes);
+  app.use(voteRoutes(deps));
 
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     if (err instanceof DomainError) {

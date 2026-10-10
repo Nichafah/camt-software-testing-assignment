@@ -52,12 +52,19 @@ const party2 = await api.createParty(
   });
 
   // Acceptance criteria ต้องการ 200
-  // ตอนนี้จะ FAIL เพราะ route ยังไม่มี
   expect(closed.status()).toBe(200);
 
   const closedBody = await closed.json();
   expect(closedBody.districtId).toBe(districtId);
   expect(closedBody.closedAt).toBeTruthy();
+
+  // Lab 07: reject both a changed vote and a first vote after closing.
+  const voter4 = await api.newVoterIn(districtId);
+  for (const voter of [voter1, voter4]) {
+    const rejected = await api.vote(voter, candidate2.id);
+    expect(rejected.status()).toBe(409);
+    expect(await rejected.json()).toEqual({ error: 'poll is closed' });
+  }
 
   // 8. หลังปิดหีบ ต้องแสดงคะแนน
   const after = await api.results(districtId);

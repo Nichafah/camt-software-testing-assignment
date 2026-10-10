@@ -66,11 +66,10 @@ src/
   routes/
     accountRoutes.ts  register, login, admin role change
     electionRoutes.ts districts, parties, candidates, public results
-    voteRoutes.ts     ⚠ legacy: global pool, jwt + process.env inline, new Date()
+    voteRoutes.ts     injected Pool, TokenService, Clock + pure ballotRules
 ```
 
-`voteRoutes.ts` is legacy on purpose (Day 2 PM lab). Closing a district's poll and showing
-scores after closing are **not implemented** on purpose (Day 2 AM outside-in lab).
+Labs 06–07 implement district closure, result publication, and rejection of new or changed votes after closure. The legacy vote handler now receives dependencies through a factory; its SQL remains a future refactoring target.
 
 ## API
 
